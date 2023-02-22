@@ -5,3 +5,9 @@ export interface Card {
   isOpened: boolean
   isFound: boolean
 }
+
+export interface TopPlayer {
+  name: string,
+  score: number,
+  date: Date
+}

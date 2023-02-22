@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 import http from 'http';
 import cors from 'cors';
 import { Server, type Socket } from 'socket.io';
+
+import { getTopPlayers } from './db/db';
+
 import { Card } from './types';
 
 dotenv.config();
@@ -21,15 +24,6 @@ const io = new Server(server, {
 });
 
 const players = new Map();
-const topPlayers = [
-  { name: 'Leet', score: 100 },
-  { name: 'Player', score: 80 },
-  { name: 'Marco', score: 60 },
-  { name: 'John', score: 50 },
-  { name: 'Kate', score: 45 },
-  { name: 'MrX', score: 30 },
-  { name: 'Test', score: 10 },
-]
 let gameCards: Card[] = [];
 
 io.on('connection', (socket: Socket) => {
@@ -86,7 +80,7 @@ io.on('connection', (socket: Socket) => {
 });
 
 app.get('/api/topPlayers', (req: Request, res: Response) => {
-  res.send(topPlayers)
+  res.send(getTopPlayers())
 })
 
 server.listen(port, () => {
