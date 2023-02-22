@@ -1,11 +1,15 @@
 import express, { type Request, type Response } from 'express';
 import dotenv from 'dotenv';
 import http from 'http';
+import cors from 'cors';
 import { Server, type Socket } from 'socket.io';
+import { Card } from './types';
 
 dotenv.config();
 
 const app = express();
+app.use(cors());
+
 const port = process.env.PORT;
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -16,15 +20,16 @@ const io = new Server(server, {
   }
 });
 
-export interface Card {
-  id: number
-  cardId: number
-  image: string
-  isOpened: boolean
-  isFound: boolean
-}
-
 const players = new Map();
+const topPlayers = [
+  { name: 'Leet', score: 100 },
+  { name: 'Player', score: 80 },
+  { name: 'Marco', score: 60 },
+  { name: 'John', score: 50 },
+  { name: 'Kate', score: 45 },
+  { name: 'MrX', score: 30 },
+  { name: 'Test', score: 10 },
+]
 let gameCards: Card[] = [];
 
 io.on('connection', (socket: Socket) => {
@@ -79,6 +84,10 @@ io.on('connection', (socket: Socket) => {
     io.emit('update', Array.from(players.keys()).map(key => ({ id: key, ...players.get(key) })));
   })
 });
+
+app.get('/api/topPlayers', (req: Request, res: Response) => {
+  res.send(topPlayers)
+})
 
 server.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
