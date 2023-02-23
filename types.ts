@@ -6,6 +6,12 @@ export interface Card {
   isFound: boolean
 }
 
+export interface Player {
+  name: string,
+  score: number,
+  isTurn: boolean
+}
+
 export interface TopPlayer {
   name: string,
   score: number,

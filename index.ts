@@ -6,7 +6,8 @@ import { Server, type Socket } from 'socket.io';
 
 import { getTopPlayers } from './db/db';
 
-import { Card } from './types';
+import { Card, Player } from './types';
+import { createPlayer, getPlayersArray } from './utils';
 
 dotenv.config();
 
@@ -23,20 +24,19 @@ const io = new Server(server, {
   }
 });
 
-const players = new Map();
+const players: Map<string, Player> = new Map();
+
+let turns: string[] = [];
 let gameCards: Card[] = [];
 
 io.on('connection', (socket: Socket) => {
   console.log('a user connected', socket.id);
 
   socket.on('newPlayer', (name) => {
-    players.set(socket.id, { score: 0, name: name || `Player ${players.size + 1}`, isTurn: players.size ? false : true });
-    io.emit('update', Array.from(players.keys()).map(key => ({ id: key, ...players.get(key) })));
-  })
-  
-  if (gameCards.length > 0) {
-      io.emit('updateClientCards', gameCards);
-  }
+    players.set(socket.id, createPlayer(name, players));
+    io.emit('update', getPlayersArray(players));
+    if (gameCards.length > 0) io.emit('updateClientCards', gameCards);
+  });
   
   socket.on('createServer', (data) => {
     gameCards = data;
@@ -46,8 +46,8 @@ io.on('connection', (socket: Socket) => {
   socket.on('disconnect', () => {
     console.log('a user disconnected', socket.id);
     players.delete(socket.id);
-    io.emit('update', Array.from(players.keys()).map(key => ({ id: key, ...players.get(key) })));
-    if (Object.keys(players).length === 0) {
+    io.emit('update', getPlayersArray(players));
+    if (players.size === 0) {
       gameCards = [];
     }
   });
@@ -59,23 +59,34 @@ io.on('connection', (socket: Socket) => {
 
   socket.on('updateScore', () => {
     const player = players.get(socket.id);
-    player.score += 1;
-    players.set(socket.id, player);
-    io.emit('update', Array.from(players.keys()).map(key => ({ id: key, ...players.get(key) })));
+    if (player) {
+      player.score += 1;
+      players.set(socket.id, player);
+    }
+    io.emit('update', getPlayersArray(players));
   })
 
   socket.on('changeTurn', () => {
+    turns.push(socket.id);
+    if (turns.length === players.size )  {
+      turns = [];
+    }
+
     const currentPlayer = players.get(socket.id);
-    const newPlayerKey = Array.from(players.keys()).find(key => key !== socket.id);
-    const newPlayer = players.get(newPlayerKey);
+    const nextPlayerId = Array.from(players.keys()).find((id: string) => !turns.includes(id)) || '';
+    const nextPlayer = players.get(nextPlayerId);
 
-    newPlayer.isTurn = true;
-    currentPlayer.isTurn = false;
+    if (nextPlayer) {
+      nextPlayer.isTurn = true;
+      players.set(nextPlayerId, nextPlayer);
+    }
 
-    players.set(socket.id, currentPlayer);
-    players.set(newPlayerKey, newPlayer);
+    if (currentPlayer) {
+      currentPlayer.isTurn = false;
+      players.set(socket.id, currentPlayer);
+    }
 
-    io.emit('update', Array.from(players.keys()).map(key => ({ id: key, ...players.get(key) })));
+    io.emit('update', getPlayersArray(players));
   })
 });
 
